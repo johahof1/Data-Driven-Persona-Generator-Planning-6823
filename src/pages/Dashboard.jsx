@@ -1,15 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { FiUsers, FiPlus, FiBarChart, FiBookOpen, FiTarget, FiDatabase } from 'react-icons/fi';
+import { FiUsers, FiPlus, FiBarChart, FiBookOpen, FiTarget, FiDatabase, FiCloud, FiHardDrive, FiSettings, FiTool } from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
 import ReactECharts from 'echarts-for-react';
 import DataSourceInfo from '../components/DataSourceInfo';
+import StorageManager from '../components/StorageManager';
+import DestAtisConnectionTest from '../components/DestAtisConnectionTest';
+import DestAtisDebugPanel from '../components/DestAtisDebugPanel';
 import dataIntegration from '../lib/dataIntegration';
 
-const Dashboard = ({ personas }) => {
-  const [dataStatus, setDataStatus] = useState({ isLoaded: false, isLoading: false, error: null });
-  
+const Dashboard = ({ personas, clearAllPersonas, onImport, user, useSupabase }) => {
+  const [dataStatus, setDataStatus] = useState({
+    isLoaded: false,
+    isLoading: false,
+    error: null
+  });
+  const [showStorageManager, setShowStorageManager] = useState(false);
+  const [showConnectionTest, setShowConnectionTest] = useState(false);
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
+
   useEffect(() => {
     // Prüfe den Datenstatus beim Laden der Komponente
     setDataStatus(dataIntegration.getDataSourceStatus());
@@ -22,9 +32,9 @@ const Dashboard = ({ personas }) => {
       setDataStatus(dataIntegration.getDataSourceStatus());
     } catch (error) {
       console.error('Fehler beim Laden der Echtdaten:', error);
-      setDataStatus({ 
-        isLoaded: false, 
-        isLoading: false, 
+      setDataStatus({
+        isLoaded: false,
+        isLoading: false,
         error: `Fehler beim Laden der Echtdaten: ${error.message}`
       });
     }
@@ -38,10 +48,12 @@ const Dashboard = ({ personas }) => {
       'senior': 0,
       'elderly': 0,
     };
+
     const genders = {
       'male': 0,
       'female': 0,
     };
+
     const incomeGroups = {
       'lowest': 0,
       'lower_middle': 0,
@@ -242,9 +254,14 @@ const Dashboard = ({ personas }) => {
               <h3 className="text-2xl font-bold text-gray-800">{personas.length}</h3>
             </div>
           </div>
-          <Link to="/personas" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-            Alle Personas anzeigen →
-          </Link>
+          <div className="flex space-x-2">
+            <Link
+              to="/personas"
+              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+            >
+              Alle Personas anzeigen →
+            </Link>
+          </div>
         </motion.div>
 
         <motion.div
@@ -260,20 +277,13 @@ const Dashboard = ({ personas }) => {
               <h3 className="text-2xl font-bold text-gray-800">1.200+</h3>
             </div>
           </div>
-          <button 
+          <button
             onClick={handleLoadRealData}
             disabled={dataStatus.isLoading}
             className="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center"
           >
-            <SafeIcon 
-              icon={FiDatabase} 
-              className={`mr-1 ${dataStatus.isLoading ? 'animate-pulse' : ''}`} 
-            />
-            {dataStatus.isLoaded 
-              ? 'Echtdaten sind aktiv' 
-              : dataStatus.isLoading 
-                ? 'Daten werden geladen...' 
-                : 'Echtdaten aktivieren'}
+            <SafeIcon icon={FiDatabase} className={`mr-1 ${dataStatus.isLoading ? 'animate-pulse' : ''}`} />
+            {dataStatus.isLoaded ? 'Echtdaten sind aktiv' : dataStatus.isLoading ? 'Daten werden geladen...' : 'Echtdaten aktivieren'}
           </button>
         </motion.div>
 
@@ -283,18 +293,97 @@ const Dashboard = ({ personas }) => {
         >
           <div className="flex items-center mb-4">
             <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center mr-4">
-              <SafeIcon icon={FiTarget} className="h-6 w-6 text-green-500" />
+              <SafeIcon icon={useSupabase ? FiCloud : FiHardDrive} className={`h-6 w-6 ${useSupabase ? 'text-green-500' : 'text-blue-500'}`} />
             </div>
             <div>
-              <p className="text-sm text-gray-500">Neue Persona erstellen</p>
-              <h3 className="text-2xl font-bold text-gray-800">Generator</h3>
+              <p className="text-sm text-gray-500">Datenspeicher</p>
+              <h3 className="text-2xl font-bold text-gray-800">
+                {useSupabase ? 'Cloud' : 'Lokal'}
+              </h3>
             </div>
           </div>
-          <Link to="/generator" className="text-green-600 hover:text-green-800 text-sm font-medium">
-            Zum Persona-Generator →
-          </Link>
+          <button
+            onClick={() => setShowStorageManager(!showStorageManager)}
+            className="text-green-600 hover:text-green-800 text-sm font-medium"
+          >
+            {showStorageManager ? 'Verwaltung ausblenden' : 'Daten verwalten →'}
+          </button>
         </motion.div>
       </div>
+
+      {/* API Testing Buttons */}
+      <div className="mb-8 flex space-x-4">
+        <button
+          onClick={() => setShowConnectionTest(!showConnectionTest)}
+          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+        >
+          <SafeIcon icon={FiSettings} className="mr-2 -ml-1 h-5 w-5" />
+          {showConnectionTest ? 'API-Test ausblenden' : 'Destatis API testen'}
+        </button>
+
+        <button
+          onClick={() => setShowDebugPanel(!showDebugPanel)}
+          className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+        >
+          <SafeIcon icon={FiTool} className="mr-2 -ml-1 h-5 w-5" />
+          {showDebugPanel ? 'Debug Panel ausblenden' : 'Advanced Debug Panel'}
+        </button>
+      </div>
+
+      {/* Debug Panel */}
+      {showDebugPanel && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <DestAtisDebugPanel />
+        </motion.div>
+      )}
+
+      {/* Connection Test Panel */}
+      {showConnectionTest && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <DestAtisConnectionTest />
+        </motion.div>
+      )}
+
+      {/* User status indicator */}
+      {user && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-8">
+          <div className="flex items-center">
+            <SafeIcon icon={FiCloud} className="h-5 w-5 text-green-600 mr-2" />
+            <div>
+              <p className="text-sm font-medium text-green-800">
+                Angemeldet als {user.email}
+              </p>
+              <p className="text-xs text-green-700">
+                Ihre Personas werden sicher in der Cloud gespeichert und synchronisiert
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showStorageManager && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <StorageManager
+            personas={personas}
+            onImport={onImport}
+            onClearAll={clearAllPersonas}
+            user={user}
+            useSupabase={useSupabase}
+          />
+        </motion.div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div className="bg-white rounded-lg shadow-md p-6">

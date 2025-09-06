@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { FiUsers, FiFilter, FiRefreshCw, FiSave, FiDatabase } from 'react-icons/fi';
+import { FiUsers, FiFilter, FiRefreshCw, FiSave, FiDatabase, FiSettings } from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
 import generatePersona from '../lib/personaGenerator';
 import dataIntegration from '../lib/dataIntegration';
 import PersonaCard from '../components/PersonaCard';
+import PersonaConfigurator from '../components/PersonaConfigurator';
 import FilterPanel from '../components/FilterPanel';
 
 const Generator = ({ addPersona }) => {
@@ -13,10 +14,15 @@ const Generator = ({ addPersona }) => {
   const [personas, setPersonas] = useState([]);
   const [count, setCount] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
+  const [showConfigurator, setShowConfigurator] = useState(false);
   const [filters, setFilters] = useState({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [useRealData, setUseRealData] = useState(false);
-  const [dataStatus, setDataStatus] = useState({ isLoaded: false, isLoading: false, error: null });
+  const [dataStatus, setDataStatus] = useState({
+    isLoaded: false,
+    isLoading: false,
+    error: null
+  });
 
   useEffect(() => {
     // Prüfe den Datenstatus beim Laden der Komponente
@@ -25,10 +31,8 @@ const Generator = ({ addPersona }) => {
 
   const handleGenerate = async () => {
     setIsGenerating(true);
-    
     try {
       let newPersonas;
-      
       if (useRealData) {
         // Verwende echte Daten für die Generierung
         newPersonas = await dataIntegration.generateRealisticPersona(count, filters);
@@ -38,7 +42,6 @@ const Generator = ({ addPersona }) => {
         // Verwende lokale Daten für die Generierung
         newPersonas = generatePersona(count, filters);
       }
-      
       setPersonas(Array.isArray(newPersonas) ? newPersonas : [newPersonas]);
     } catch (error) {
       console.error('Fehler bei der Persona-Generierung:', error);
@@ -60,10 +63,16 @@ const Generator = ({ addPersona }) => {
     navigate('/personas');
   };
 
+  const handleConfiguratorSave = (persona) => {
+    addPersona(persona);
+    setShowConfigurator(false);
+    navigate(`/persona/${persona.id}`);
+  };
+
   const toggleDataSource = async () => {
     const newState = !useRealData;
     setUseRealData(newState);
-    
+
     // Wenn wir auf echte Daten umschalten und diese noch nicht geladen sind, lade sie
     if (newState && !dataStatus.isLoaded && !dataStatus.isLoading) {
       try {
@@ -72,9 +81,9 @@ const Generator = ({ addPersona }) => {
         setDataStatus(dataIntegration.getDataSourceStatus());
       } catch (error) {
         console.error('Fehler beim Laden der Echtdaten:', error);
-        setDataStatus({ 
-          isLoaded: false, 
-          isLoading: false, 
+        setDataStatus({
+          isLoaded: false,
+          isLoading: false,
           error: `Fehler beim Laden der Echtdaten: ${error.message}`
         });
       }
@@ -108,6 +117,7 @@ const Generator = ({ addPersona }) => {
                 ))}
               </select>
             </div>
+
             <button
               onClick={() => setShowFilters(!showFilters)}
               className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -115,37 +125,39 @@ const Generator = ({ addPersona }) => {
               <SafeIcon icon={FiFilter} className="mr-2 -ml-1 h-5 w-5" />
               Filter {showFilters ? 'ausblenden' : 'anzeigen'}
             </button>
+
             <button
               onClick={toggleDataSource}
               className={`inline-flex items-center px-4 py-2 border rounded-md shadow-sm text-sm font-medium ${
-                useRealData 
-                  ? 'text-white bg-green-600 hover:bg-green-700 border-transparent' 
+                useRealData
+                  ? 'text-white bg-green-600 hover:bg-green-700 border-transparent'
                   : 'text-gray-700 bg-white hover:bg-gray-50 border-gray-300'
               } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
               disabled={dataStatus.isLoading}
             >
-              <SafeIcon 
-                icon={FiDatabase} 
-                className={`mr-2 -ml-1 h-5 w-5 ${dataStatus.isLoading ? 'animate-pulse' : ''}`} 
-              />
-              {dataStatus.isLoading 
-                ? 'Daten laden...' 
-                : useRealData 
-                  ? 'Echte Daten aktiv' 
-                  : 'Simulierte Daten'}
+              <SafeIcon icon={FiDatabase} className={`mr-2 -ml-1 h-5 w-5 ${dataStatus.isLoading ? 'animate-pulse' : ''}`} />
+              {dataStatus.isLoading ? 'Daten laden...' : useRealData ? 'Echte Daten aktiv' : 'Simulierte Daten'}
             </button>
           </div>
-          <button
-            onClick={handleGenerate}
-            disabled={isGenerating}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-          >
-            <SafeIcon
-              icon={isGenerating ? FiRefreshCw : FiUsers}
-              className={`mr-2 -ml-1 h-5 w-5 ${isGenerating ? 'animate-spin' : ''}`}
-            />
-            {isGenerating ? 'Generiere...' : 'Personas generieren'}
-          </button>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowConfigurator(true)}
+              className="inline-flex items-center px-4 py-2 border border-indigo-300 rounded-md shadow-sm text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              <SafeIcon icon={FiSettings} className="mr-2 -ml-1 h-5 w-5" />
+              Persona konfigurieren
+            </button>
+
+            <button
+              onClick={handleGenerate}
+              disabled={isGenerating}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              <SafeIcon icon={isGenerating ? FiRefreshCw : FiUsers} className={`mr-2 -ml-1 h-5 w-5 ${isGenerating ? 'animate-spin' : ''}`} />
+              {isGenerating ? 'Generiere...' : 'Zufällig generieren'}
+            </button>
+          </div>
         </div>
 
         {dataStatus.error && (
@@ -176,6 +188,43 @@ const Generator = ({ addPersona }) => {
         )}
       </div>
 
+      {/* Generierungsmethoden Info */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-6 rounded-lg border border-indigo-200">
+          <div className="flex items-center mb-4">
+            <SafeIcon icon={FiSettings} className="h-8 w-8 text-indigo-600 mr-3" />
+            <h3 className="text-lg font-semibold text-indigo-800">Persona konfigurieren</h3>
+          </div>
+          <p className="text-indigo-700 mb-4">
+            Erstellen Sie eine maßgeschneiderte Persona durch die Eingabe spezifischer Parameter. 
+            Einkommen und Verhalten werden intelligent basierend auf Ihren Angaben berechnet.
+          </p>
+          <ul className="text-sm text-indigo-600 space-y-1">
+            <li>• Präzise Kontrolle über alle Parameter</li>
+            <li>• Automatische Einkommensschätzung</li>
+            <li>• Intelligente Ableitung von Verhalten</li>
+            <li>• Realistische Konsistenz</li>
+          </ul>
+        </div>
+
+        <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-6 rounded-lg border border-blue-200">
+          <div className="flex items-center mb-4">
+            <SafeIcon icon={FiUsers} className="h-8 w-8 text-blue-600 mr-3" />
+            <h3 className="text-lg font-semibold text-blue-800">Zufällige Generierung</h3>
+          </div>
+          <p className="text-blue-700 mb-4">
+            Lassen Sie realistische Personas automatisch basierend auf deutschen 
+            demografischen Daten und statistischen Wahrscheinlichkeiten erstellen.
+          </p>
+          <ul className="text-sm text-blue-600 space-y-1">
+            <li>• Statistische Genauigkeit</li>
+            <li>• Schnelle Erstellung mehrerer Personas</li>
+            <li>• Demografische Filter verfügbar</li>
+            <li>• Echte oder simulierte Datenquellen</li>
+          </ul>
+        </div>
+      </div>
+
       {personas.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -196,6 +245,7 @@ const Generator = ({ addPersona }) => {
               </button>
             )}
           </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {personas.map(persona => (
               <PersonaCard
@@ -206,6 +256,14 @@ const Generator = ({ addPersona }) => {
             ))}
           </div>
         </motion.div>
+      )}
+
+      {/* Persona Konfigurator Modal */}
+      {showConfigurator && (
+        <PersonaConfigurator
+          onSave={handleConfiguratorSave}
+          onClose={() => setShowConfigurator(false)}
+        />
       )}
     </div>
   );
